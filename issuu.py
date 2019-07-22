@@ -22,7 +22,7 @@ for page in range(1, howmanypages + 1):
     imglink = imglink2 + str(page) + ".jpg"
 
     # download image asset
-    wget.download(imglink)
+    wget.download(imglink, out='page_%04d.jpg' % (page))
     print('\nPage {}: {}\n'.format(page, imglink))
 
     with  open('urls.txt', 'a') as f:
