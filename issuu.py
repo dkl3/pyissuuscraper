@@ -5,33 +5,37 @@ import os
 import urllib.request
 import re
 import subprocess
+import tempfile
 
 url = str(input("Enter the url: "))
 howmanypages = int(input("How many pages? "))
 
-for page in range(1, howmanypages + 1):
+def safepath(title):
+    return title.replace(os.path.sep, '_')
 
-    # download webpage for scrapping
-    webpage = urllib.request.urlopen(url)
-    soup = BeautifulSoup(webpage, 'html.parser')
+with tempfile.TemporaryDirectory() as tmpdir:
+    for page in range(1, howmanypages + 1):
 
-    # locate the image asset
-    pagetitle = soup.find('meta', attrs={'property': 'og:title'})['content']
-    imglink3 = soup.find('meta', attrs={'property': 'og:image'})['content']
-    imglink2 = imglink3.replace('1.jpg','')
-    imglink = imglink2 + str(page) + ".jpg"
+        # download webpage for scraping
+        webpage = urllib.request.urlopen(url)
+        soup = BeautifulSoup(webpage, 'html.parser')
 
-    # download image asset
-    wget.download(imglink)
-    print('\nPage {}: {}\n'.format(page, imglink))
+        # locate the image asset
+        pagetitle = safepath(soup.find('meta', attrs={'property': 'og:title'})['content'])
+        imglink3 = soup.find('meta', attrs={'property': 'og:image'})['content']
+        imglink2 = imglink3.replace('1.jpg','')
+        imglink = imglink2 + str(page) + ".jpg"
 
-    with  open('urls.txt', 'a') as f:
-        f.write(imglink + '\n')
+        # download image asset
+        wget.download(imglink, out=os.path.join(tmpdir, 'page_%04d.jpg' % (page)))
+        print('\nPage {}: {}\n'.format(page, imglink))
 
+        with open(pagetitle + ' urls.txt', 'a') as f:
+            f.write(imglink + '\n')
 
-# convert pages to pdf
-params = ['convert', 'page_*', pagetitle + '.pdf']
-subprocess.run(params)
+    # convert pages to pdf
+    params = ['convert', os.path.join(tmpdir, 'page_*'), pagetitle + '.pdf']
+    subprocess.run(params)
 
 # collect information on the file
 metadata = {}
@@ -48,7 +52,5 @@ metadata['uploader'] = soup.find('a', attrs={'itemprop': 'author'}).contents[0]
 metadata_out = '\n'.join({'{}: {}'.format(k, v) for k, v in metadata.items()})
 print(metadata_out)
 
-with open('info.txt', 'w') as f:
+with open(pagetitle + ' info.txt', 'w') as f:
     f.write(metadata_out)
-
-os.system('rm page_*')
